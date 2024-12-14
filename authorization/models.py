@@ -1,13 +1,9 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-
+from django.utils import timezone
 
 class BaseUserManager(BaseUserManager):
-    """
-    Manager for the BaseUser model.
-    """
-
     def create_user(self, phone_number, password=None, **extra_fields):
         if not phone_number:
             raise ValueError(_('The Phone Number must be provided'))
@@ -29,28 +25,6 @@ class BaseUserManager(BaseUserManager):
         return self.create_user(phone_number, password, **extra_fields)
 
 
-# class BaseUser(AbstractBaseUser, PermissionsMixin):
-#     """
-#     Abstract base user model with phone_number as the unique identifier.
-#     """
-#     first_name = models.CharField(max_length=50, blank=True)
-#     last_name = models.CharField(max_length=50, blank=True)
-#     phone_number = models.CharField(max_length=15, unique=True)
-#     email = models.EmailField(blank=True, null=True)
-#     is_active = models.BooleanField(default=True)
-#     is_staff = models.BooleanField(default=False)
-
-#     objects = BaseUserManager()
-
-#     USERNAME_FIELD = 'phone_number'
-#     REQUIRED_FIELDS = []
-
-#     class Meta:
-#         abstract = True
-
-#     def __str__(self):
-#         return self.phone_number
-
 class BaseUser(AbstractBaseUser, PermissionsMixin):
     """
     Abstract base user model with phone_number as the unique identifier.
@@ -67,6 +41,8 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
+    national_id = models.CharField(max_length=10, blank=True, null=True)
+    date_joined = models.DateTimeField(default=timezone.now)
 
     objects = BaseUserManager()
 
@@ -80,20 +56,26 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
 class CustomerUser(BaseUser):
     """
     Customer-specific user model inheriting from BaseUser.
+    You can keep extra fields specific to customers here if needed.
     """
-    date_of_birth = models.DateField(blank=True, null=True)
-    national_id = models.CharField(max_length=10, blank=True, null=True)
-
+    # If you do not have extra fields for customers, this can simply rely on BaseUser fields
     class Meta:
         verbose_name = "Customer User"
         verbose_name_plural = "Customer Users"
 
 
+class ProviderProfile(models.Model):
+    user = models.OneToOneField(BaseUser, on_delete=models.CASCADE, related_name="provider_profile")
+    business_name = models.CharField(max_length=100)
+    business_address = models.CharField(max_length=255, blank=True, null=True)  # Optional
+    business_contact = models.CharField(max_length=15)
+    website_url = models.URLField(blank=True, null=True)  # Optional
+
+    def __str__(self):
+        return f"Provider: {self.user.phone_number} ({self.business_name})"
+
 
 class VerificationCode(models.Model):
-    """
-    Model to store verification codes for phone number verification.
-    """
     phone_number = models.CharField(max_length=15)
     code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -104,42 +86,8 @@ class VerificationCode(models.Model):
 
 
 class TokenBlacklist(models.Model):
-    """
-    Model to store invalidated refresh tokens.
-    """
     token = models.TextField()
     blacklisted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Blacklisted token {self.token[:10]}..."
-
-class CustomerProfile(models.Model):
-    user = models.OneToOneField(BaseUser, on_delete=models.CASCADE, related_name="customer_profile")
-    date_of_birth = models.DateField(blank=True, null=True)
-    national_id = models.CharField(max_length=10, blank=True, null=True)
-
-    def __str__(self):
-        return f"Customer: {self.user.phone_number}"
-
-
-class ProviderProfile(models.Model):
-    user = models.OneToOneField(BaseUser, on_delete=models.CASCADE, related_name="provider_profile")
-    business_name = models.CharField(max_length=100)
-    business_contact = models.CharField(max_length=15)
-    website_url = models.URLField()
-
-    def __str__(self):
-        return f"Provider: {self.user.phone_number} ({self.business_name})"
-
-
-# class ProviderUser(BaseUser):
-#     """
-#     Provider-specific user model inheriting from BaseUser.
-#     """
-#     business_name = models.CharField(max_length=100)
-#     business_contact = models.CharField(max_length=15)
-#     website_url = models.URLField()
-
-#     class Meta:
-#         verbose_name = "Provider User"
-#         verbose_name_plural = "Provider Users"
