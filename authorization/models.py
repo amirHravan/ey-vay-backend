@@ -77,16 +77,16 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
         return f"{self.phone_number} ({self.role})"
 
 
-# class CustomerUser(BaseUser):
-#     """
-#     Customer-specific user model inheriting from BaseUser.
-#     """
-#     date_of_birth = models.DateField(blank=True, null=True)
-#     national_id = models.CharField(max_length=10, blank=True, null=True)
+class CustomerUser(BaseUser):
+    """
+    Customer-specific user model inheriting from BaseUser.
+    """
+    date_of_birth = models.DateField(blank=True, null=True)
+    national_id = models.CharField(max_length=10, blank=True, null=True)
 
-#     class Meta:
-#         verbose_name = "Customer User"
-#         verbose_name_plural = "Customer Users"
+    class Meta:
+        verbose_name = "Customer User"
+        verbose_name_plural = "Customer Users"
 
 
 
