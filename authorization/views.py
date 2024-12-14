@@ -25,6 +25,14 @@ class SendVerificationCodeView(APIView):
         serializer = SendVerificationCodeSerializer(data=request.data)
         if serializer.is_valid():
             phone_number = serializer.validated_data['phone_number']
+
+            # Check if the user already exists
+            if CustomerUser.objects.filter(phone_number=phone_number).exists():
+                return Response(
+                    {'status': 'error', 'message': 'User with this phone number already exists.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             code = str(random.randint(100000, 999999))  # Generate a 6-digit code
             print(f"code: {code}")
             VerificationCode.objects.create(phone_number=phone_number, code=code)
