@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     # Libraries
     'corsheaders',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     # Local
     'authorization',
 ]
@@ -146,7 +147,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    'BLACKLIST_AFTER_ROTATION': True,  # Required for blacklisting tokens
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 

@@ -13,6 +13,7 @@ from .serializers import (
     LoginSerializer,
     LogoutSerializer,
     RefreshTokenSerializer,
+    UserDetailSerializer,
 )
 import random
 
@@ -20,10 +21,12 @@ class SendVerificationCodeView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        print(request.data)
         serializer = SendVerificationCodeSerializer(data=request.data)
         if serializer.is_valid():
             phone_number = serializer.validated_data['phone_number']
             code = str(random.randint(100000, 999999))  # Generate a 6-digit code
+            print(f"code: {code}")
             VerificationCode.objects.create(phone_number=phone_number, code=code)
             # In production, send the code via SMS here
             return Response({'status': 'success', 'message': 'Verification code sent successfully.'})
@@ -31,6 +34,8 @@ class SendVerificationCodeView(APIView):
 
 
 class VerifyCodeView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
         serializer = VerifyCodeSerializer(data=request.data)
         if serializer.is_valid():
@@ -47,7 +52,10 @@ class VerifyCodeView(APIView):
 
 
 class RegisterBuyerView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
+        print(request.data)
         serializer = RegisterBuyerSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
@@ -57,6 +65,7 @@ class RegisterBuyerView(APIView):
 
 class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
@@ -86,14 +95,25 @@ class LogoutView(APIView):
         serializer = LogoutSerializer(data=request.data)
         if serializer.is_valid():
             refresh_token = serializer.validated_data['refresh']
+            print(refresh_token)
             try:
                 token = RefreshToken(refresh_token)
                 token.blacklist()
                 return Response({'status': 'success', 'message': 'Logged out successfully.'})
             except Exception as e:
+                print(e)
                 return Response({'status': 'error', 'message': 'Invalid or expired refresh token.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RefreshTokenView(TokenRefreshView):
     serializer_class = RefreshTokenSerializer
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]  # Require access token for this endpoint
+
+    def get(self, request):
+        # The authenticated user is available in `request.user`
+        user = request.user
+        serializer = UserDetailSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)

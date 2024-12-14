@@ -31,3 +31,8 @@ class LogoutSerializer(serializers.Serializer):
 
 class RefreshTokenSerializer(serializers.Serializer):
     refresh = serializers.CharField()
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerUser
+        fields = ['first_name', 'last_name', 'date_of_birth', 'phone_number', 'email', 'national_id']
