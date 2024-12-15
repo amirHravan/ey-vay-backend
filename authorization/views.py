@@ -4,8 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
-from .models import VerificationCode, CustomerUser, BaseUser
+from .models import VerificationCode, BaseUser, ProviderProfile
 from .serializers import (
     SendVerificationCodeSerializer,
     VerifyCodeSerializer,
@@ -25,18 +24,16 @@ class SendVerificationCodeView(APIView):
         serializer = SendVerificationCodeSerializer(data=request.data)
         if serializer.is_valid():
             phone_number = serializer.validated_data['phone_number']
-
-            # Check if the user already exists
             if BaseUser.objects.filter(phone_number=phone_number).exists():
                 return Response(
                     {'status': 'error', 'message': 'User with this phone number already exists.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            code = str(random.randint(100000, 999999))  # Generate a 6-digit code
-            print(f'code: {code}')
+            code = str(random.randint(100000, 999999))
+            print(f"Sending code {code}")
             VerificationCode.objects.create(phone_number=phone_number, code=code)
-            # In production, send the code via SMS here
+            # In production, send the code via SMS
             return Response({'status': 'success', 'message': 'Verification code sent successfully.'})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -67,7 +64,7 @@ class RegisterBuyerView(APIView):
     def post(self, request):
         serializer = RegisterCustomerSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            serializer.save()
             return Response({'status': 'success', 'message': 'Buyer registered successfully.'})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -78,7 +75,7 @@ class RegisterProviderView(APIView):
     def post(self, request):
         serializer = RegisterProviderSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            serializer.save()
             return Response({'status': 'success', 'message': 'Provider registered successfully.'})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -93,7 +90,7 @@ class LoginView(TokenObtainPairView):
             phone_number = serializer.validated_data['phone_number']
             password = serializer.validated_data['password']
             try:
-                user = CustomerUser.objects.get(phone_number=phone_number) # TODO: change to BaseUser
+                user = BaseUser.objects.get(phone_number=phone_number)
                 if user.check_password(password):
                     tokens = RefreshToken.for_user(user)
                     return Response({
@@ -102,7 +99,7 @@ class LoginView(TokenObtainPairView):
                         'refresh': str(tokens),
                     })
                 else:
-                    raise BaseUser.DoesNotExist
+                    return Response({'status': 'error', 'message': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
             except BaseUser.DoesNotExist:
                 return Response({'status': 'error', 'message': 'Invalid credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -132,6 +129,31 @@ class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        serializer = UserDetailSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        user = request.user 
+
+        base_data = {
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone_number": user.phone_number,
+            "email": user.email,
+            "role": user.role,
+            "national_id": user.national_id,
+            "date_joined": user.date_joined,
+        }
+
+        if user.role == 'provider':
+            try:
+                provider_profile = user.provider_profile
+                base_data.update({
+                    "business_name": provider_profile.business_name,
+                    "business_address": provider_profile.business_address,
+                    "business_contact": provider_profile.business_contact,
+                    "website_url": provider_profile.website_url,
+                })
+            except ProviderProfile.DoesNotExist:
+                return Response(
+                    {"status": "error", "message": "Provider profile not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        return Response(base_data, status=status.HTTP_200_OK)

@@ -156,7 +156,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://your-production-frontend.com",  # Production frontend
 ]
 
-AUTH_USER_MODEL = 'authorization.CustomerUser'
+AUTH_USER_MODEL = 'authorization.BaseUser'
 
 
 # CORS Configuration

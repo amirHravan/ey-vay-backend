@@ -26,9 +26,10 @@ class BaseUserManager(BaseUserManager):
 
 
 class BaseUser(AbstractBaseUser, PermissionsMixin):
-    """
-    Abstract base user model with phone_number as the unique identifier.
-    """
+    ROLE_CHOICES = [
+        ('customer', 'Customer'),
+        ('provider', 'Provider'),
+    ]
     first_name = models.CharField(max_length=50, blank=True)
     last_name = models.CharField(max_length=50, blank=True)
     phone_number = models.CharField(max_length=15, unique=True)
@@ -51,23 +52,12 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
         return self.phone_number
 
 
-class CustomerUser(BaseUser):
-    """
-    Customer-specific user model inheriting from BaseUser.
-    You can keep extra fields specific to customers here if needed.
-    """
-    # If you do not have extra fields for customers, this can simply rely on BaseUser fields
-    class Meta:
-        verbose_name = "Customer User"
-        verbose_name_plural = "Customer Users"
-
-
 class ProviderProfile(models.Model):
     user = models.OneToOneField(BaseUser, on_delete=models.CASCADE, related_name="provider_profile")
     business_name = models.CharField(max_length=100)
-    business_address = models.CharField(max_length=255, blank=True, null=True)  # Optional
+    business_address = models.CharField(max_length=255, blank=True, null=True)
     business_contact = models.CharField(max_length=15)
-    website_url = models.URLField(blank=True, null=True)  # Optional
+    website_url = models.URLField(blank=True, null=True)
 
     def __str__(self):
         return f"Provider: {self.user.phone_number} ({self.business_name})"
