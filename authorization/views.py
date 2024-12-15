@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .models import VerificationCode, BaseUser
+from .models import VerificationCode, BaseUser, ProviderProfile
 from .serializers import (
     SendVerificationCodeSerializer,
     VerifyCodeSerializer,
@@ -129,6 +129,31 @@ class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        serializer = UserDetailSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        user = request.user 
+
+        base_data = {
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone_number": user.phone_number,
+            "email": user.email,
+            "role": user.role,
+            "national_id": user.national_id,
+            "date_joined": user.date_joined,
+        }
+
+        if user.role == 'provider':
+            try:
+                provider_profile = user.provider_profile
+                base_data.update({
+                    "business_name": provider_profile.business_name,
+                    "business_address": provider_profile.business_address,
+                    "business_contact": provider_profile.business_contact,
+                    "website_url": provider_profile.website_url,
+                })
+            except ProviderProfile.DoesNotExist:
+                return Response(
+                    {"status": "error", "message": "Provider profile not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        return Response(base_data, status=status.HTTP_200_OK)
