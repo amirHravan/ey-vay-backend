@@ -30,6 +30,7 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
         ('customer', 'Customer'),
         ('provider', 'Provider'),
     ]
+
     first_name = models.CharField(max_length=50, blank=True)
     last_name = models.CharField(max_length=50, blank=True)
     phone_number = models.CharField(max_length=15, unique=True)
@@ -45,11 +46,8 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []
 
-    class Meta:
-        abstract = True
-
     def __str__(self):
-        return self.phone_number
+        return f"{self.phone_number} ({self.role})"
 
 
 class ProviderProfile(models.Model):
