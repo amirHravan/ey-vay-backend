@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomerUser, BaseUser, ProviderProfile
+from .models import BaseUser, ProviderProfile
 
 class SendVerificationCodeSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)
@@ -8,12 +8,11 @@ class VerifyCodeSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)
     code = serializers.CharField(max_length=6)
 
-
 class RegisterCustomerSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
     class Meta:
-        model = CustomerUser
+        model = BaseUser
         fields = [
             'first_name', 'last_name', 'phone_number', 'email', 'national_id', 'password'
         ]
@@ -21,7 +20,7 @@ class RegisterCustomerSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['role'] = 'customer'
         password = validated_data.pop('password')
-        user = CustomerUser(**validated_data)
+        user = BaseUser.objects.create_user(**validated_data)
         user.set_password(password)
         user.save()
         return user
@@ -46,13 +45,11 @@ class RegisterProviderSerializer(serializers.Serializer):
         business_contact = validated_data.pop('business_contact')
         website_url = validated_data.pop('website_url', None)
 
-        # Create the base user with provider role
         validated_data['role'] = 'provider'
         user = BaseUser.objects.create_user(**validated_data)
         user.set_password(password)
         user.save()
 
-        # Create the provider profile
         ProviderProfile.objects.create(
             user=user,
             business_name=business_name,
